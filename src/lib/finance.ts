@@ -51,8 +51,30 @@ export interface Expense {
   amount: number;
   date: string; // ISO date
   mode: ExpenseMode;
-  category: ScheduleCCategory;
-  discretionary: boolean; // hidden by the Survival Toggle
+  category: ScheduleCCategory; // Schedule C line (drives deductions)
+  capCategory?: string; // consumer spending bucket for pay-period caps
+  discretionary: boolean; // hidden by Strict Mode
+}
+
+/** A pay-period spending cap on a consumer category. */
+export interface Cap {
+  category: string;
+  limit: number;
+}
+
+export type CapState = "ok" | "near" | "over";
+
+export interface CapStatus {
+  category: string;
+  limit: number;
+  spent: number;
+  pct: number;
+  state: CapState;
+}
+
+export interface PayPeriod {
+  startOn: string; // ISO date the current period began
+  days: number; // length of the period (e.g. 14 for biweekly)
 }
 
 export type FixedCadence = "monthly" | "quarterly" | "annual";
@@ -80,6 +102,7 @@ export interface Settings {
   taxRatePct: number; // effective set-aside rate, e.g. 30
   emergencyTarget: number; // cash cushion to protect
   shadowHourlyCost: number; // opportunity cost of an unbilled hour
+  payPeriod: PayPeriod; // caps and budgeting run on this cycle, not the month
 }
 
 export interface FinanceState {
@@ -90,8 +113,9 @@ export interface FinanceState {
   expenses: Expense[];
   fixedCosts: FixedCost[];
   clients: Client[];
+  caps: Cap[];
   settings: Settings;
-  survivalMode: boolean;
+  survivalMode: boolean; // "Strict Mode" in the UI
 }
 
 // ----------------------------------------------------------------------------
@@ -182,12 +206,22 @@ export function seedState(): FinanceState {
       { id: "e2", merchant: "Figma", amount: 45, date: "2026-07-20", mode: "business", category: "Software & Subscriptions", discretionary: false },
       { id: "e3", merchant: "WeWork Day Pass", amount: 29, date: "2026-07-19", mode: "business", category: "Office & Supplies", discretionary: true },
       { id: "e4", merchant: "Client Lunch — Terra", amount: 64.5, date: "2026-07-17", mode: "business", category: "Meals (50%)", discretionary: false },
-      { id: "e5", merchant: "Whole Foods", amount: 112.34, date: "2026-07-16", mode: "personal", category: "Personal", discretionary: false },
       { id: "e6", merchant: "Amazon — Wacom pen", amount: 89, date: "2026-07-14", mode: "business", category: "Equipment", discretionary: false },
-      { id: "e7", merchant: "Spotify", amount: 11.99, date: "2026-07-12", mode: "personal", category: "Personal", discretionary: true },
       { id: "e8", merchant: "Delta — SFO→PDX (conf.)", amount: 218, date: "2026-07-09", mode: "business", category: "Travel", discretionary: true },
       { id: "e9", merchant: "Google Workspace", amount: 12, date: "2026-07-05", mode: "business", category: "Software & Subscriptions", discretionary: false },
-      { id: "e10", merchant: "Sweetgreen", amount: 17.25, date: "2026-07-27", mode: "personal", category: "Personal", discretionary: true },
+      // Personal spending, tagged to pay-period cap buckets.
+      { id: "p1", merchant: "Whole Foods", amount: 112.34, date: "2026-07-16", mode: "personal", category: "Personal", capCategory: "Groceries", discretionary: false },
+      { id: "p2", merchant: "Trader Joe's", amount: 88.5, date: "2026-07-24", mode: "personal", category: "Personal", capCategory: "Groceries", discretionary: false },
+      { id: "p3", merchant: "Nomad — dinner", amount: 92, date: "2026-07-25", mode: "personal", category: "Personal", capCategory: "Dining", discretionary: true },
+      { id: "p4", merchant: "Thai takeout", amount: 34, date: "2026-07-28", mode: "personal", category: "Personal", capCategory: "Dining", discretionary: true },
+      { id: "p5", merchant: "Sweetgreen", amount: 17.25, date: "2026-07-27", mode: "personal", category: "Personal", capCategory: "Dining", discretionary: true },
+      { id: "p6", merchant: "Blue Bottle", amount: 6.5, date: "2026-07-20", mode: "personal", category: "Personal", capCategory: "Dining", discretionary: true },
+      { id: "p7", merchant: "Spotify", amount: 11.99, date: "2026-07-18", mode: "personal", category: "Personal", capCategory: "Subscriptions", discretionary: true },
+      { id: "p8", merchant: "iCloud+", amount: 2.99, date: "2026-07-19", mode: "personal", category: "Personal", capCategory: "Subscriptions", discretionary: false },
+      { id: "p9", merchant: "Uber", amount: 24, date: "2026-07-21", mode: "personal", category: "Personal", capCategory: "Transport", discretionary: false },
+      { id: "p10", merchant: "Uber", amount: 18.4, date: "2026-07-26", mode: "personal", category: "Personal", capCategory: "Transport", discretionary: true },
+      { id: "p11", merchant: "Uniqlo", amount: 79, date: "2026-07-23", mode: "personal", category: "Personal", capCategory: "Shopping", discretionary: true },
+      { id: "p12", merchant: "Amazon — home", amount: 44.3, date: "2026-07-17", mode: "personal", category: "Personal", capCategory: "Shopping", discretionary: false },
     ],
     fixedCosts: [
       { id: "f1", name: "Rent", amount: 2100, cadence: "monthly", mode: "personal", essential: true, nextDueOn: "2026-08-01" },
@@ -202,11 +236,20 @@ export function seedState(): FinanceState {
       { id: "c3", name: "Upwork — Terra App", commHoursPerMonth: 5, avgPaymentDelayDays: 6, billedRatePerHour: 110 },
       { id: "c4", name: "Bright Labs", commHoursPerMonth: 2, avgPaymentDelayDays: 1, billedRatePerHour: 130 },
     ],
+    caps: [
+      { category: "Groceries", limit: 300 },
+      { category: "Dining", limit: 120 },
+      { category: "Subscriptions", limit: 60 },
+      { category: "Transport", limit: 80 },
+      { category: "Shopping", limit: 150 },
+    ],
     settings: {
       taxRatePct: 30,
       // The cushion kept inside checking that Safe-to-Spend refuses to touch.
       emergencyTarget: 3000,
       shadowHourlyCost: 95,
+      // Biweekly cycle; the current period runs Jul 16 → resets Jul 30.
+      payPeriod: { startOn: "2026-07-16", days: 14 },
     },
     survivalMode: false,
   };
@@ -388,6 +431,65 @@ export function clientProfitability(s: FinanceState): ClientProfitability[] {
       ),
     }))
     .sort((a, b) => b.score - a.score);
+}
+
+// ----------------------------------------------------------------------------
+// Pay-period spending caps — budgeting on the freelancer's cycle, not the month.
+// ----------------------------------------------------------------------------
+
+function addDays(iso: string, days: number): Date {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** ISO date the current pay period resets. */
+export function periodResetDate(s: FinanceState): Date {
+  return addDays(s.settings.payPeriod.startOn, s.settings.payPeriod.days);
+}
+
+/** Days remaining in the current pay period. */
+export function daysLeftInPeriod(s: FinanceState): number {
+  return Math.max(0, daysBetween(TODAY, periodResetDate(s)));
+}
+
+function inCurrentPeriod(s: FinanceState, iso: string): boolean {
+  const t = new Date(iso + "T12:00:00").getTime();
+  const start = new Date(s.settings.payPeriod.startOn + "T12:00:00").getTime();
+  return t >= start && t < periodResetDate(s).getTime();
+}
+
+/** Spend against each cap this pay period, with an ok / near / over state. */
+export function capSpending(s: FinanceState): CapStatus[] {
+  return s.caps.map((cap) => {
+    const spent = s.expenses
+      .filter((e) => e.capCategory === cap.category && inCurrentPeriod(s, e.date))
+      .reduce((sum, e) => sum + e.amount, 0);
+    const pct = cap.limit <= 0 ? 0 : spent / cap.limit;
+    const state: CapState = spent > cap.limit ? "over" : pct >= 0.8 ? "near" : "ok";
+    return { category: cap.category, limit: cap.limit, spent, pct, state };
+  });
+}
+
+export function totalCapLimit(s: FinanceState): number {
+  return s.caps.reduce((sum, c) => sum + c.limit, 0);
+}
+
+export function totalCapSpent(s: FinanceState): number {
+  return capSpending(s).reduce((sum, c) => sum + c.spent, 0);
+}
+
+export function capsOverCount(s: FinanceState): number {
+  return capSpending(s).filter((c) => c.state === "over").length;
+}
+
+/**
+ * Strict Mode status. "On track" when overall period spend is within the total
+ * budget and Safe-to-Spend is still positive — even if a single category is
+ * over its own cap.
+ */
+export function onTrack(s: FinanceState): boolean {
+  return totalCapSpent(s) <= totalCapLimit(s) && safeToSpend(s) >= 0;
 }
 
 // ----------------------------------------------------------------------------

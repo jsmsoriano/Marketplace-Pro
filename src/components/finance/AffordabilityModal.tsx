@@ -105,7 +105,7 @@ export function AffordabilityModal({ open, onClose }: { open: boolean; onClose: 
               value={item}
               onChange={(e) => setItem(e.target.value)}
               placeholder="e.g. new iPad for client work"
-              className="w-full rounded-xl border border-ink-700 bg-ink-900 px-4 py-3 text-mist-100 placeholder:text-mist-600 focus:border-ember-500 focus:outline-none"
+              className="w-full rounded-xl border border-ink-700 bg-ink-900 px-4 py-3 text-mist-100 placeholder:text-mist-600 focus:border-brand-500 focus:outline-none"
             />
           </div>
           <div>
@@ -117,7 +117,7 @@ export function AffordabilityModal({ open, onClose }: { open: boolean; onClose: 
                 onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                 inputMode="decimal"
                 placeholder="0"
-                className="tabular w-full rounded-xl border border-ink-700 bg-ink-900 py-3 pl-8 pr-4 text-mist-100 placeholder:text-mist-600 focus:border-ember-500 focus:outline-none"
+                className="tabular w-full rounded-xl border border-ink-700 bg-ink-900 py-3 pl-8 pr-4 text-mist-100 placeholder:text-mist-600 focus:border-brand-500 focus:outline-none"
               />
             </div>
           </div>
@@ -125,7 +125,7 @@ export function AffordabilityModal({ open, onClose }: { open: boolean; onClose: 
           <button
             onClick={ask}
             disabled={loading}
-            className="ember-gradient w-full rounded-xl py-3.5 font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
+            className="brand-gradient w-full rounded-xl py-3.5 font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
           >
             {loading ? "Checking your numbers…" : "Ask the advisor"}
           </button>

@@ -38,7 +38,7 @@ export function RunwayView() {
       <section className="animate-rise surface overflow-hidden rounded-3xl p-6">
         <div className="mb-1 flex items-center justify-between">
           <span className="text-sm font-medium text-mist-500">Safe to spend today</span>
-          {state.survivalMode && <Pill tone="ember">Survival mode</Pill>}
+          {state.survivalMode && <Pill tone="ember">Strict Mode</Pill>}
         </div>
         <div className={`tabular text-5xl font-bold tracking-tight ${sts < 0 ? "text-ember-400" : "text-mist-100"}`}>
           {money(sts)}
@@ -49,7 +49,7 @@ export function RunwayView() {
 
         <button
           onClick={() => setAskOpen(true)}
-          className="ember-gradient mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-semibold text-white transition active:scale-[0.99]"
+          className="brand-gradient mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-semibold text-white transition active:scale-[0.99]"
         >
           <span className="font-mono text-lg">?</span> Can I afford this?
         </button>
