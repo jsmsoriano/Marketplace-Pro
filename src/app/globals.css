@@ -1,12 +1,109 @@
 @import "tailwindcss";
 
+/*
+  The Solopreneur Engine — design system.
+  A calm, deep-charcoal canvas so the signature orange→red urgency accent and
+  the "Safe-to-Spend" hero number carry all the visual weight. Minimalist,
+  hero-centric, built to lower financial anxiety rather than raise it.
+*/
+
+@theme {
+  --color-ink-950: #0a0d12;
+  --color-ink-900: #0e1319;
+  --color-ink-850: #131a22;
+  --color-ink-800: #18212b;
+  --color-ink-700: #223040;
+  --color-ink-600: #34465a;
+
+  --color-mist-100: #f4f7fb;
+  --color-mist-300: #c4d0dd;
+  --color-mist-500: #8296a9;
+  --color-mist-600: #64788c;
+
+  --color-ember-400: #ff8a3d;
+  --color-ember-500: #ff6a2b;
+  --color-ember-600: #f2451f;
+  --color-ember-700: #d92626;
+
+  --color-safe-400: #34e0a1;
+  --color-safe-500: #10c98a;
+
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #0a0d12;
+  --foreground: #f4f7fb;
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 106, 43, 0.10), transparent 60%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The urgency gradient — reused for tax deadlines and warning states. */
+.ember-gradient {
+  background-image: linear-gradient(135deg, var(--color-ember-400), var(--color-ember-700));
+}
+.ember-text {
+  background-image: linear-gradient(120deg, var(--color-ember-400), var(--color-ember-600));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Frosted card surface used across every module. */
+.surface {
+  background: linear-gradient(180deg, rgba(24, 33, 43, 0.9), rgba(19, 26, 34, 0.9));
+  border: 1px solid rgba(52, 70, 90, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Hide scrollbars on the phone frame without losing scroll. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheet {
+  animation: sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

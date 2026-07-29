@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ResumeMatch AI — Optimize Your Resume for Any Job",
-  description: "Upload your resume, paste a job description, and let AI restructure your resume to match the role perfectly.",
+  title: "Solopreneur Engine — Financial clarity for freelancers",
+  description:
+    "A financial framework built for irregular income: Safe-to-Spend, runway, automated tax quarantine, invoice forecasting, and client profitability — for gig workers and freelancers.",
 };
 
 export default function RootLayout({

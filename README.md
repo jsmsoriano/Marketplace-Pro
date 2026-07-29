@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Solopreneur Engine
 
-## Getting Started
+A financial app for gig workers and freelancers, built around the reality of
+**irregular income**. Instead of a calendar-month budget that assumes a steady
+paycheck, the Engine answers the questions freelancers actually ask: _"How long
+can I survive?"_, _"How much have I really set aside for taxes?"_, and _"Can I
+afford this today?"_
 
-First, run the development server:
+Built with Next.js (App Router) + React + Tailwind, and an optional
+Claude-powered affordability advisor.
+
+## The idea
+
+Most money apps track **what happened**. The Solopreneur Engine forecasts
+**what's possible** — it moves the focus from a monthly balance to a single
+_Safe-to-Spend_ number and a _runway_ measured in days of survival.
+
+| | Traditional app | Solopreneur Engine |
+| :-- | :-- | :-- |
+| Primary metric | Monthly balance | **Safe-to-Spend** number |
+| Income view | Past deposits | Cash **+ expected invoices** |
+| Tax handling | Manual | Automated **Tax Quarantine** |
+| Budget cycle | Calendar month | **Runway** (days of survival) |
+
+## Modules
+
+- **Runway** — the home screen. A live _Safe-to-Spend_ hero (cash minus taxes
+  owed, upcoming fixed costs and your emergency buffer), a runway ring showing
+  days of survival with and without outstanding invoices, and a one-tap
+  **"Can I afford this?"** advisor.
+- **Invoices** — every invoice is a data point in the forecast. Net-of-fee math
+  per platform (Stripe / Upwork / PayPal / Direct), overdue detection with
+  auto-reminders, and "mark paid" that flows straight into cash and runway.
+- **Tax (Quarantine)** — money set aside before you can touch it. Shows tax
+  owed vs. quarantined, an ember-urgency shortfall meter, a one-tap
+  "quarantine now" action, the next quarterly deadline, and an adjustable
+  set-aside rate.
+- **Expenses** — dual-mode tracking: swipe any charge between **business** and
+  **personal**, mapped to Schedule C categories (meals auto-computed at 50%),
+  with running deductions captured.
+- **Clients** — the competitive wedge: a **Client Profitability Score** that
+  ranks clients by _true profit_ — net revenue minus the cost of unbilled
+  communication time, penalized for a history of late payment.
+
+Plus a global **Survival Toggle** in the header that hides discretionary
+spending and recomputes runway around essentials only.
+
+## Design language
+
+- Deep-charcoal canvas so the signature **orange→red** urgency accent and the
+  Safe-to-Spend number carry the visual weight.
+- Symbolic single-letter monogram icons (**T** for Tax, **I** for Invoices…)
+  instead of emoji.
+- Hero-centric, mobile-first layout that renders as a phone frame on desktop.
+
+## The affordability advisor
+
+The **"Can I afford this?"** flow sends the engine's already-computed snapshot
+(Safe-to-Spend, runway, unfunded tax, outstanding invoices) to a route handler
+that asks Claude for a grounded verdict — _yes / think twice / not today_ — with
+one line of reasoning that references your real numbers.
+
+If no `ANTHROPIC_API_KEY` is configured, the route falls back to a deterministic
+rule, so the feature still works out of the box. To enable the Claude-powered
+version:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running it
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev      # http://localhost:3000
+# or
+npm run build && npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All data is seeded in `src/lib/finance.ts` (a freelance designer, mid-quarter)
+and lives in client state, so every action — marking an invoice paid, moving
+money to the tax vault, retagging an expense, flipping survival mode —
+recalculates the whole model live.
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  lib/finance.ts                  # pure model: types, seed data, calculations
+  app/page.tsx                    # FinanceProvider + AppShell
+  app/api/affordability/route.ts  # Claude advisor (+ deterministic fallback)
+  components/finance/
+    FinanceProvider.tsx           # context store + mutations
+    AppShell.tsx                  # phone frame, header, bottom nav
+    RunwayView / IncomeView / TaxView / ExpensesView / ClientsView
+    AffordabilityModal.tsx        # "Can I afford this?" flow
+    ui.tsx                        # Monogram, Meter, RunwayRing, Sheet, Pill
+```
