@@ -46,6 +46,45 @@ describe("POST /api/parse-resume", () => {
     expect(data.error).toMatch(/PDF/);
   });
 
+  it("extracts text from a real PDF with the v2 parser", async () => {
+    const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 55 >>
+stream
+BT /F1 18 Tf 24 72 Td (Hello Resume) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+trailer
+<< /Root 1 0 R >>
+%%EOF
+`;
+    const form = new FormData();
+    form.append(
+      "file",
+      new File([pdf], "resume.pdf", { type: "application/pdf" })
+    );
+    const req = new NextRequest("http://localhost/api/parse-resume", {
+      method: "POST",
+      body: form,
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.text).toContain("Hello Resume");
+  });
+
   it("returns 400 when no file is provided", async () => {
     const req = new NextRequest("http://localhost/api/parse-resume", {
       method: "POST",
