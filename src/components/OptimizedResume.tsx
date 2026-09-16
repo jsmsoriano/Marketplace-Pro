@@ -26,7 +26,13 @@ export default function OptimizedResume({ result, originalText, onReset }: Props
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `resume-optimized-${result.jobTitle.replace(/\s+/g, "-").toLowerCase()}.txt`;
+    const slug =
+      result.jobTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "role";
+    a.download = `resume-optimized-${slug}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };

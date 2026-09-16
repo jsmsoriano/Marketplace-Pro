@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ResumeMatch AI
 
-## Getting Started
+Upload a resume, add a job description, and get an ATS-oriented rewrite from Claude.
 
-First, run the development server:
+## Setup
+
+1. Install dependencies: `npm install`
+2. Copy `.env.example` to `.env.local` and set `ANTHROPIC_API_KEY`
+3. Start the app: `npm run dev`
+4. Open [http://localhost:3000](http://localhost:3000)
+
+## Supported resume formats
+
+PDF, DOCX, and TXT, up to 10MB. Legacy `.doc` files are not supported — export them as PDF or DOCX first.
+
+## Privacy
+
+Resumes are parsed in memory and are not saved on this server. The extracted resume text and job description are sent to Anthropic to generate the rewrite. Do not upload information you cannot share with Anthropic.
+
+## Job URLs
+
+You can paste a public job-posting URL. The fetcher only allows `http`/`https` pages on public addresses — localhost, private networks, and cloud metadata hosts are blocked. Many boards require login or block scrapers; if fetch fails, paste the description instead.
+
+## Scripts
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev    # development server
+npm run build  # production build
+npm run lint   # eslint
+npm test       # unit tests
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -14,8 +14,8 @@ export default function ResumeUpload({ onUploaded }: Props) {
   const processFile = useCallback(
     async (file: File) => {
       setError("");
-      if (!file.name.match(/\.(pdf|docx|doc|txt)$/i)) {
-        setError("Please upload a PDF, DOCX, DOC, or TXT file.");
+      if (!file.name.match(/\.(pdf|docx|txt)$/i)) {
+        setError("Please upload a PDF, DOCX, or TXT file.");
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -77,7 +77,7 @@ export default function ResumeUpload({ onUploaded }: Props) {
         <input
           id="file-input"
           type="file"
-          accept=".pdf,.docx,.doc,.txt"
+          accept=".pdf,.docx,.txt"
           className="hidden"
           onChange={handleFileInput}
         />
@@ -99,11 +99,11 @@ export default function ResumeUpload({ onUploaded }: Props) {
                 Drop your resume here, or click to browse
               </p>
               <p className="text-sm text-slate-500 mt-1">
-                Supports PDF, DOCX, DOC, and TXT — up to 10MB
+                Supports PDF, DOCX, and TXT — up to 10MB
               </p>
             </div>
             <div className="flex gap-2 flex-wrap justify-center">
-              {["PDF", "DOCX", "DOC", "TXT"].map((fmt) => (
+              {["PDF", "DOCX", "TXT"].map((fmt) => (
                 <span key={fmt} className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-full">
                   {fmt}
                 </span>
@@ -121,7 +121,7 @@ export default function ResumeUpload({ onUploaded }: Props) {
         {[
           { icon: "🎯", title: "ATS Optimized", desc: "Pass applicant tracking systems" },
           { icon: "⚡", title: "Instant Results", desc: "AI optimization in seconds" },
-          { icon: "🔒", title: "Private & Secure", desc: "Your data is never stored" },
+          { icon: "🔒", title: "Not stored here", desc: "Parsed in memory; sent to Anthropic to rewrite" },
         ].map((f) => (
           <div key={f.title} className="text-center p-4 bg-white rounded-xl border border-slate-100">
             <div className="text-2xl mb-2">{f.icon}</div>
