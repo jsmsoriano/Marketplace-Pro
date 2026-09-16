@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   EMPTY_INVENTORY,
+  INVENTORY_UPDATED_EVENT,
   MAX_BIN_CAPACITY,
   MIN_BIN_CAPACITY,
   capacityForBin,
@@ -18,6 +19,12 @@ import type { NiftyOrder } from '@/lib/orders';
 
 export function useInventory() {
   const [state, setState] = useState<InventoryState>(loadInventoryState);
+
+  useEffect(() => {
+    const sync = (event: Event) => setState((event as CustomEvent<InventoryState>).detail);
+    window.addEventListener(INVENTORY_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(INVENTORY_UPDATED_EVENT, sync);
+  }, []);
 
   const commit = useCallback((update: (current: InventoryState) => InventoryState) => {
     setState((current) => {

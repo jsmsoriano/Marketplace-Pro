@@ -8,11 +8,11 @@ import { toast } from '@/hooks/use-toast';
 import { useSalesData } from '@/hooks/use-sales-data';
 import { brandRecommendations, type BrandRecommendation, type BuySignal, type Direction } from '@/lib/analytics';
 import { fetchEbayOrders, researchTrends, type EbayOrdersResponse } from '@/lib/api';
-import { filterOrdersByPeriod, formatCurrency, formatPercent, inferItemType, type NiftyOrder, type Period } from '@/lib/orders';
+import { categoryForOrder, filterOrdersByPeriod, formatCurrency, formatPercent, type NiftyOrder, type Period } from '@/lib/orders';
 
 export default function ResearchV2() {
   const [params] = useSearchParams();
-  const { orders } = useSalesData();
+  const { orders, mergeEbayOrders } = useSalesData();
   const suggestions = useMemo(() => brandRecommendations(orders, '90d').slice(0, 5), [orders]);
   const [query, setQuery] = useState(params.get('q') ?? 'fashion resale trends');
   const [loading, setLoading] = useState<'ebay' | 'trends' | null>(null);
@@ -28,7 +28,8 @@ export default function ResearchV2() {
     try {
       const result = await fetchEbayOrders(90);
       setEbay(result.data);
-      toast({ title: 'eBay sales synced', description: `${result.data.total} seller order${result.data.total === 1 ? '' : 's'} found.` });
+      const merged = mergeEbayOrders(result.data);
+      toast({ title: 'eBay sales synced', description: `${result.data.total} orders · ${result.data.categorizedItems} officially categorized · ${merged.added} added · ${merged.enriched} enriched.` });
     } catch (error) {
       toast({ title: 'eBay sync failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
@@ -99,31 +100,35 @@ function StoreTrends({ orders }: { orders: NiftyOrder[] }) {
   const [marketplace, setMarketplace] = useState('All');
   const [itemType, setItemType] = useState('All');
   const marketplaces = useMemo(() => ['All', ...Array.from(new Set(orders.map((order) => order.marketplace))).sort()], [orders]);
-  const itemTypes = useMemo(() => ['All', ...Array.from(new Set(orders.map((order) => inferItemType(order.itemName)))).sort()], [orders]);
-  const scopedOrders = useMemo(() => orders.filter((order) => (marketplace === 'All' || order.marketplace === marketplace) && (itemType === 'All' || inferItemType(order.itemName) === itemType)), [itemType, marketplace, orders]);
+  const itemTypes = useMemo(() => ['All', ...Array.from(new Set(orders.map(categoryForOrder))).sort()], [orders]);
+  const officialCategories = useMemo(() => new Set(orders.filter((order) => order.categorySource === 'official-ebay').map(categoryForOrder)), [orders]);
+  const scopedOrders = useMemo(() => orders.filter((order) => (marketplace === 'All' || order.marketplace === marketplace) && (itemType === 'All' || categoryForOrder(order) === itemType)), [itemType, marketplace, orders]);
   const currentOrders = useMemo(() => filterOrdersByPeriod(scopedOrders, period), [scopedOrders, period]);
   const recommendations = useMemo(() => [...brandRecommendations(scopedOrders, period)].sort((a, b) => b.units - a.units || b.score - a.score), [scopedOrders, period]);
   const fastSales = currentOrders.filter((order) => order.daysListed <= 30).length;
   const medianDays = median(currentOrders.map((order) => order.daysListed));
   const leader = recommendations[0];
+  const officialCategorySales = currentOrders.filter((order) => order.categorySource === 'official-ebay').length;
 
   return <div className="space-y-4">
     <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div><div className="flex items-center gap-2"><Store className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /><h2 className="font-semibold">What is trending in your store</h2></div><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Rank brands using your imported Nifty sales. Signals describe your store—not marketplace-wide sold demand.</p></div>
+        <div><div className="flex items-center gap-2"><Store className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /><h2 className="font-semibold">What is trending in your store</h2></div><p className="mt-2 max-w-2xl text-sm text-muted-foreground">eBay sync uses official listing categories. Nifty rows without category data use title inference so Poshmark, Depop, and historical sales remain filterable.</p></div>
         <div className="flex flex-wrap gap-2">
           <select aria-label="Store trends marketplace" value={marketplace} onChange={(event) => setMarketplace(event.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{marketplaces.map((item) => <option key={item} value={item}>{item === 'All' ? 'All marketplaces' : item}</option>)}</select>
-          <select aria-label="Store trends item type" value={itemType} onChange={(event) => setItemType(event.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{itemTypes.map((item) => <option key={item} value={item}>{item === 'All' ? 'All item types' : item}</option>)}</select>
-          <select aria-label="Store trends period" value={period} onChange={(event) => setPeriod(event.target.value as Period)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All imported sales</option></select>
+          <select aria-label="Store trends item type" value={itemType} onChange={(event) => setItemType(event.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{itemTypes.map((item) => <option key={item} value={item}>{item === 'All' ? 'All categories' : `${item} · ${officialCategories.has(item) ? 'eBay official' : 'inferred'}`}</option>)}</select>
+          <select aria-label="Store trends period" value={period} onChange={(event) => setPeriod(event.target.value as Period)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="180d">Last 6 months</option><option value="365d">Last 12 months</option><option value="all">All imported sales</option></select>
         </div>
       </div>
     </section>
+
+    <p className="px-1 text-xs text-muted-foreground">Category coverage: <strong className="text-foreground">{officialCategorySales}</strong> sales use official eBay categories; <strong className="text-foreground">{currentOrders.length - officialCategorySales}</strong> use inferred categories.</p>
 
     <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <StoreMetric label="Items sold" value={String(currentOrders.length)} detail={marketplace === 'All' ? 'Across all platforms' : `On ${marketplace}`} icon={ShoppingBag} />
       <StoreMetric label="Median days to sell" value={`${Math.round(medianDays)}d`} detail="Less distorted by old inventory" icon={Clock3} />
       <StoreMetric label="Sold within 30 days" value={formatPercent(currentOrders.length ? fastSales / currentOrders.length : 0)} detail={`${fastSales} fast-moving item${fastSales === 1 ? '' : 's'}`} icon={BarChart3} />
-      <StoreMetric label="Top-selling brand" value={leader?.brand ?? '—'} detail={leader ? `${leader.units} sold · ${leader.buySignal}` : 'Import Nifty orders'} icon={Sparkles} />
+      <StoreMetric label="Top-selling brand" value={leader?.brand ?? '—'} detail={leader ? `${leader.units} sold · ${formatFrequency(leader)} · ${leader.buySignal}` : 'Import Nifty orders'} icon={Sparkles} />
     </section>
 
     {marketplace === 'All' ? <section className="grid gap-3 md:grid-cols-3">{['eBay', 'Poshmark', 'Depop'].map((platform) => <PlatformTrendCard key={platform} platform={platform} orders={orders} period={period} itemType={itemType} />)}</section> : null}
@@ -132,7 +137,7 @@ function StoreTrends({ orders }: { orders: NiftyOrder[] }) {
       <div className="flex flex-col justify-between gap-2 border-b border-border px-5 py-4 sm:flex-row sm:items-center"><div><h2 className="font-semibold">{itemType === 'All' ? 'Brands selling most' : `Brands trending in ${itemType}`}</h2><p className="mt-1 text-xs text-muted-foreground">Sorted by units sold, then signal score. A minimum of three sales is required before recommending a buy.</p></div><span className="text-xs text-muted-foreground">{recommendations.length} observed brands</span></div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1050px] text-sm">
-          <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-4 py-3">Brand</th><th className="px-4 py-3 text-right">Sold</th><th className="px-4 py-3">Direction</th><th className="px-4 py-3 text-right">Median days</th><th className="px-4 py-3 text-right">≤30 days</th><th className="px-4 py-3 text-right">Avg price</th><th className="px-4 py-3 text-right">Avg profit</th><th className="px-4 py-3">Best platform</th><th className="px-4 py-3">Buy decision</th></tr></thead>
+          <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-4 py-3">Brand</th><th className="px-4 py-3 text-right">Sales frequency</th><th className="px-4 py-3">Direction</th><th className="px-4 py-3 text-right">Median days</th><th className="px-4 py-3 text-right">≤30 days</th><th className="px-4 py-3 text-right">Avg price</th><th className="px-4 py-3 text-right">Avg profit</th><th className="px-4 py-3">Best platform</th><th className="px-4 py-3">Buy decision</th></tr></thead>
           <tbody>{recommendations.map((item) => <BrandTrendRow key={item.brand} item={item} />)}</tbody>
         </table>
         {!recommendations.length ? <div className="px-5 py-16 text-center text-sm text-muted-foreground">No imported sales match this marketplace and period.</div> : null}
@@ -144,7 +149,7 @@ function StoreTrends({ orders }: { orders: NiftyOrder[] }) {
 }
 
 function BrandTrendRow({ item }: { item: BrandRecommendation }) {
-  return <tr className="border-t border-border [content-visibility:auto]"><td className="px-4 py-4"><p className="font-semibold">{item.brand}</p><p className="mt-1 text-[11px] text-muted-foreground">{item.confidence} confidence</p></td><td className="px-4 py-4 text-right text-base font-bold tabular-nums">{item.units}</td><td className="px-4 py-4"><DirectionBadge direction={item.direction} change={item.change} /></td><td className="px-4 py-4 text-right font-medium tabular-nums">{Math.round(item.medianDaysListed)}d</td><td className="px-4 py-4 text-right tabular-nums">{formatPercent(item.soldWithin30Days)}</td><td className="px-4 py-4 text-right tabular-nums">{formatCurrency(item.averagePrice)}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{formatCurrency(item.units ? item.profit / item.units : 0)}</td><td className="px-4 py-4">{item.topMarketplace}</td><td className="px-4 py-4"><BuySignalBadge signal={item.buySignal} /></td></tr>;
+  return <tr className="border-t border-border [content-visibility:auto]"><td className="px-4 py-4"><p className="font-semibold">{item.brand}</p><p className="mt-1 text-[11px] text-muted-foreground">{item.confidence} confidence</p></td><td className="px-4 py-4 text-right"><p className="text-base font-bold tabular-nums">{item.units} sold</p><p className="mt-1 whitespace-nowrap text-[11px] text-muted-foreground">{formatFrequency(item)} · every {formatDays(item.daysPerSale)}</p></td><td className="px-4 py-4"><DirectionBadge direction={item.direction} change={item.change} /></td><td className="px-4 py-4 text-right font-medium tabular-nums">{Math.round(item.medianDaysListed)}d</td><td className="px-4 py-4 text-right tabular-nums">{formatPercent(item.soldWithin30Days)}</td><td className="px-4 py-4 text-right tabular-nums">{formatCurrency(item.averagePrice)}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{formatCurrency(item.units ? item.profit / item.units : 0)}</td><td className="px-4 py-4">{item.topMarketplace}</td><td className="px-4 py-4"><BuySignalBadge signal={item.buySignal} /></td></tr>;
 }
 
 function DirectionBadge({ direction, change }: { direction: Direction; change: number | null }) {
@@ -159,10 +164,18 @@ function BuySignalBadge({ signal }: { signal: BuySignal }) {
 }
 
 function PlatformTrendCard({ platform, orders, period, itemType }: { platform: string; orders: NiftyOrder[]; period: Period; itemType: string }) {
-  const platformOrders = orders.filter((order) => order.marketplace.toLowerCase() === platform.toLowerCase() && (itemType === 'All' || inferItemType(order.itemName) === itemType));
+  const platformOrders = orders.filter((order) => order.marketplace.toLowerCase() === platform.toLowerCase() && (itemType === 'All' || categoryForOrder(order) === itemType));
   const current = filterOrdersByPeriod(platformOrders, period);
   const leaders = brandRecommendations(platformOrders, period).sort((a, b) => b.units - a.units || b.score - a.score);
-  return <div className="rounded-xl border border-border bg-card p-4 shadow-sm"><div className="flex items-center justify-between"><h3 className="font-semibold">{platform}</h3><span className="text-xs text-muted-foreground">{current.length} sold</span></div><p className="mt-4 text-2xl font-semibold">{leaders[0]?.brand ?? 'No sales'}</p><p className="mt-1 text-xs text-muted-foreground">{leaders[0] ? `${leaders[0].units} sold · ${Math.round(leaders[0].medianDaysListed)} median days` : 'No signal for this period'}</p></div>;
+  return <div className="rounded-xl border border-border bg-card p-4 shadow-sm"><div className="flex items-center justify-between"><h3 className="font-semibold">{platform}</h3><span className="text-xs text-muted-foreground">{current.length} sold</span></div><p className="mt-4 text-2xl font-semibold">{leaders[0]?.brand ?? 'No sales'}</p><p className="mt-1 text-xs text-muted-foreground">{leaders[0] ? `${leaders[0].units} sold · ${formatFrequency(leaders[0])} · ${Math.round(leaders[0].medianDaysListed)} median days` : 'No signal for this period'}</p></div>;
+}
+
+function formatFrequency(item: BrandRecommendation) {
+  return `${item.salesPerMonth < 0.1 ? item.salesPerMonth.toFixed(2) : item.salesPerMonth.toFixed(1)}/month`;
+}
+
+function formatDays(days: number) {
+  return days < 1 ? '<1d' : `${Math.round(days)}d`;
 }
 
 function StoreMetric({ label, value, detail, icon: Icon }: { label: string; value: string; detail: string; icon: typeof Search }) {

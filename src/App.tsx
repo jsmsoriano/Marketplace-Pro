@@ -9,6 +9,9 @@ import OptimizeListing from '@/pages/OptimizeListingV2';
 import Research from '@/pages/ResearchV2';
 import PullList from '@/pages/PullList';
 import InventoryMap from '@/pages/InventoryMap';
+import InventoryAudit from '@/pages/InventoryAudit';
+import SalesCalculator from '@/pages/SalesCalculator';
+import Reports from '@/pages/Reports';
 import NotFound from '@/pages/NotFound';
 
 function App() {
@@ -25,6 +28,9 @@ function App() {
               <Route path="/trends" element={<Layout><Research /></Layout>} />
               <Route path="/pull-list" element={<Layout><PullList /></Layout>} />
               <Route path="/inventory" element={<Layout><InventoryMap /></Layout>} />
+              <Route path="/inventory-audit" element={<Layout><InventoryAudit /></Layout>} />
+              <Route path="/calculator" element={<Layout><SalesCalculator /></Layout>} />
+              <Route path="/reports" element={<Layout><Reports /></Layout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />

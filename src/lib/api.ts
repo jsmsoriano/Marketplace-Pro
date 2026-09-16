@@ -31,6 +31,9 @@ export type EbayOrder = {
     total: number;
     shippingCost: number;
     fulfillmentStatus: string;
+    categoryId: string;
+    categoryName: string;
+    categorySource: 'official-ebay' | 'unavailable';
   }>;
 };
 
@@ -39,6 +42,7 @@ export type EbayOrdersResponse = {
   fetchedAt: string;
   window: { days: number; start: string; end: string };
   total: number;
+  categorizedItems: number;
   orders: EbayOrder[];
 };
 

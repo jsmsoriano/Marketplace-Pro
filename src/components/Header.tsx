@@ -13,6 +13,9 @@ const titles: Record<string, string> = {
   '/trends': 'Market Signals',
   '/pull-list': 'Daily Pull List',
   '/inventory': 'Inventory Map',
+  '/inventory-audit': 'Inventory Audit',
+  '/calculator': 'Sales Calculator',
+  '/reports': 'Reports',
 };
 
 const Header = () => {

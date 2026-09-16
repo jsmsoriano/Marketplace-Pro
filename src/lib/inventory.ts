@@ -26,6 +26,7 @@ export const MIN_BIN_CAPACITY = 15;
 export const MAX_BIN_CAPACITY = 20;
 export const BINS_PER_SHELF = 15;
 export const INVENTORY_STORAGE_KEY = 'marketplace-pro:inventory:v2';
+export const INVENTORY_UPDATED_EVENT = 'marketplace-pro:inventory-updated';
 const LEGACY_STORAGE_KEY = 'marketplace-pro:inventory:v1';
 
 export const EMPTY_INVENTORY: InventoryState = {
@@ -62,6 +63,7 @@ export function loadInventoryState(): InventoryState {
 
 export function saveInventoryState(state: InventoryState) {
   localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(state));
+  queueMicrotask(() => window.dispatchEvent(new CustomEvent(INVENTORY_UPDATED_EVENT, { detail: state })));
 }
 
 export function pullKey(order: NiftyOrder): string {

@@ -1,7 +1,9 @@
 import {
   filterOrdersByPeriod,
   inferBrand,
+  orderDate,
   orderRevenue,
+  periodDays,
   previousPeriodOrders,
   type NiftyOrder,
   type Period,
@@ -23,6 +25,9 @@ export type BrandRecommendation = {
   averageDaysListed: number;
   medianDaysListed: number;
   soldWithin30Days: number;
+  salesPerMonth: number;
+  daysPerSale: number;
+  measurementDays: number;
   direction: Direction;
   change: number | null;
   score: number;
@@ -63,6 +68,7 @@ export function brandRecommendations(allOrders: NiftyOrder[], period: Period): B
   const current = filterOrdersByPeriod(allOrders, period);
   const previous = previousPeriodOrders(allOrders, period);
   const previousByBrand = new Map(groupBy(previous, normalizedBrand));
+  const measurementDays = frequencyWindowDays(current, period);
 
   return groupBy(current, normalizedBrand)
     .map(([brand, orders]) => {
@@ -93,6 +99,9 @@ export function brandRecommendations(allOrders: NiftyOrder[], period: Period): B
         averageDaysListed: summary.averageDaysListed,
         medianDaysListed,
         soldWithin30Days,
+        salesPerMonth: orders.length / measurementDays * 30,
+        daysPerSale: measurementDays / orders.length,
+        measurementDays,
         direction,
         change,
         score,
@@ -104,6 +113,14 @@ export function brandRecommendations(allOrders: NiftyOrder[], period: Period): B
       };
     })
     .sort((a, b) => b.score - a.score);
+}
+
+function frequencyWindowDays(orders: NiftyOrder[], period: Period) {
+  const fixedDays = periodDays(period);
+  if (fixedDays != null) return fixedDays;
+  const dates = orders.map((order) => orderDate(order).getTime()).filter(Number.isFinite);
+  if (dates.length < 2) return 1;
+  return Math.max(1, Math.ceil((Math.max(...dates) - Math.min(...dates)) / 86_400_000) + 1);
 }
 
 export function recentSales(orders: NiftyOrder[], limit = 6): NiftyOrder[] {

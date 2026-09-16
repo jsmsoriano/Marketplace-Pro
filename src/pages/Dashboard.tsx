@@ -12,7 +12,7 @@ import { brandRecommendations, marketplaceBreakdown, recentSales, summarizeOrder
 import { filterOrdersByPeriod, formatCurrency, formatPercent, type Period } from '@/lib/orders';
 
 export default function Dashboard() {
-  const { orders, mode } = useSalesData();
+  const { orders, mode, activeInventory } = useSalesData();
   const [period, setPeriod] = useState<Period>('30d');
   const visibleOrders = useMemo(() => filterOrdersByPeriod(orders, period), [orders, period]);
   const summary = useMemo(() => summarizeOrders(visibleOrders), [visibleOrders]);
@@ -140,7 +140,7 @@ export default function Dashboard() {
       </section>
 
       {mode === 'imported' ? (
-        <p className="text-center text-xs text-muted-foreground">Brand names are inferred from listing titles. Confirmed brand and active-inventory imports are planned for the next data schema.</p>
+        <p className="text-center text-xs text-muted-foreground">Brand names fall back to listing-title inference. {activeInventory.length ? `${activeInventory.length} active inventory rows are available for inventory-aware sourcing.` : 'Import Active Inventory to add sell-through and stock coverage.'}</p>
       ) : null}
     </div>
   );

@@ -21,9 +21,15 @@ export type NiftyOrder = {
   shippingExpenses: number;
   otherExpenses: number;
   totalProfit: number;
+  categoryId?: string;
+  categoryName?: string;
+  categorySource?: 'official-ebay' | 'inferred';
+  source?: 'nifty' | 'ebay-api' | 'nifty+ebay';
+  externalOrderId?: string;
+  externalLineItemId?: string;
 };
 
-export type Period = '7d' | '30d' | '90d' | 'all';
+export type Period = '7d' | '30d' | '90d' | '180d' | '365d' | 'all';
 
 const TWO_WORD_BRANDS = [
   'Heritage America',
@@ -129,6 +135,10 @@ export function parseNiftyCsv(text: string): NiftyOrder[] {
         shippingExpenses: numberValue(get(row, 'Shipping Expenses')),
         otherExpenses: numberValue(get(row, 'Other Expenses')),
         totalProfit: numberValue(get(row, 'Total Profit')),
+        categoryId: get(row, 'Category ID') || undefined,
+        categoryName: get(row, 'Category') || get(row, 'Category Name') || undefined,
+        categorySource: get(row, 'Category ID') || get(row, 'Category') || get(row, 'Category Name') ? 'official-ebay' : 'inferred',
+        source: 'nifty',
       };
     });
 }
@@ -146,6 +156,14 @@ export function inferBrand(title: string): string {
 export function inferItemType(title: string): string {
   const normalized = title.replace(/\s+/g, ' ').trim();
   return ITEM_TYPE_RULES.find(([, pattern]) => pattern.test(normalized))?.[0] ?? 'Other';
+}
+
+export function categoryForOrder(order: NiftyOrder): string {
+  if (order.categoryName?.trim()) {
+    const parts = order.categoryName.split(/\s*(?::|>)\s*/).filter(Boolean);
+    return parts.at(-1) || order.categoryName.trim();
+  }
+  return inferItemType(order.itemName);
 }
 
 export function periodDays(period: Period): number | null {

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { BarChart3, Grid3X3, ListChecks, Search, ShoppingBag, Sparkles } from 'lucide-react';
+import { BarChart3, Calculator, ClipboardCheck, FileSpreadsheet, Grid3X3, ListChecks, Search, ShoppingBag, Sparkles } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +18,10 @@ const navItems = [
   { icon: BarChart3, label: 'Overview', path: '/' },
   { icon: ListChecks, label: 'Daily pull list', path: '/pull-list' },
   { icon: Grid3X3, label: 'Inventory map', path: '/inventory' },
+  { icon: ClipboardCheck, label: 'Inventory audit', path: '/inventory-audit' },
   { icon: ShoppingBag, label: 'Sourcing', path: '/sourcing' },
+  { icon: Calculator, label: 'Sales calculator', path: '/calculator' },
+  { icon: FileSpreadsheet, label: 'Reports', path: '/reports' },
   { icon: Search, label: 'Market signals', path: '/research' },
   { icon: Sparkles, label: 'Listing lab', path: '/optimize' },
 ];
