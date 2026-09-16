@@ -16,6 +16,7 @@ export default function JobDescriptionInput({ fileName, onOptimize, isLoading }:
   const [jobUrl, setJobUrl] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
+  const [fetchedNotice, setFetchedNotice] = useState(false);
 
   const handleFetchUrl = async () => {
     if (!jobUrl.trim()) return;
@@ -33,6 +34,7 @@ export default function JobDescriptionInput({ fileName, onOptimize, isLoading }:
       }
       const { text } = await res.json();
       setJobText(text);
+      setFetchedNotice(true);
       setMode("paste");
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Failed to fetch URL");
@@ -119,19 +121,29 @@ export default function JobDescriptionInput({ fileName, onOptimize, isLoading }:
               {fetchError && (
                 <p className="text-xs text-red-600">{fetchError}</p>
               )}
-              {jobText && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
-                  Job description fetched successfully. Switched to text view.
-                </div>
+              {jobText && !fetchError && (
+                <p className="text-xs text-slate-500">
+                  Fetched text is available in the Paste Text tab.
+                </p>
               )}
             </div>
           ) : (
-            <textarea
-              value={jobText}
-              onChange={(e) => setJobText(e.target.value)}
-              placeholder="Paste the full job description here — include the title, responsibilities, requirements, and skills..."
-              className="w-full h-48 px-4 py-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div className="space-y-3">
+              {fetchedNotice && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+                  Job description fetched from URL. Review it below, then optimize.
+                </div>
+              )}
+              <textarea
+                value={jobText}
+                onChange={(e) => {
+                  setJobText(e.target.value);
+                  setFetchedNotice(false);
+                }}
+                placeholder="Paste the full job description here — include the title, responsibilities, requirements, and skills..."
+                className="w-full h-48 px-4 py-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           )}
 
           <div className="mt-4 flex items-center justify-between">
