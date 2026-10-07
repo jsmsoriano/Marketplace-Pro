@@ -13,7 +13,7 @@ const allItems = [
   { icon: Calculator, label: 'Sales calculator', shortLabel: 'Calc', description: 'Estimate eBay proceeds and profit', path: '/calculator' },
   { icon: FileSpreadsheet, label: 'Reports', shortLabel: 'Reports', description: 'Customize and print marketplace reports', path: '/reports' },
   { icon: Search, label: 'Market signals', shortLabel: 'Signals', description: 'Brand, category, and demand trends', path: '/research' },
-  { icon: Sparkles, label: 'Listing lab', shortLabel: 'Listing', description: 'Improve titles and listing quality', path: '/optimize' },
+  { icon: Sparkles, label: 'Listing lab', shortLabel: 'Listing', description: 'Titles, descriptions, and brand size conversion', path: '/optimize' },
 ];
 
 const primaryPaths = ['/', '/pull-list', '/sourcing', '/calculator'];
