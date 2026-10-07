@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { brandsWithCharts, chartById, chartsForBrand } from '@/lib/brand-size-charts';
 import { EBAY_ALPHA_SIZES, EBAY_SIZE_SOURCES, type EbayMarketplace } from '@/lib/ebay-size-policy';
-import { convertBrandSize, defaultChartId, defaultSizeLabel, previewChart, rowLabels, type TieChoice } from '@/lib/size-conversion';
+import { Input } from '@/components/ui/input';
+import { convertBrandSize, convertUnlistedBrand, defaultChartId, defaultSizeLabel, OTHER_BRAND, previewChart, rowLabels, type TieChoice, type UnlistedFamily } from '@/lib/size-conversion';
 import { cn } from '@/lib/utils';
 
 type SizeConversionProps = {
@@ -20,20 +21,36 @@ export default function SizeConversion({ onUseDescription }: SizeConversionProps
     const chart = chartById(defaultChartId(brands[0] ?? ''));
     return chart ? defaultSizeLabel(chart) : '';
   });
+  const [otherName, setOtherName] = useState('');
+  const [otherFamily, setOtherFamily] = useState<UnlistedFamily>('tops');
+  const [otherSize, setOtherSize] = useState('');
   const [inseam, setInseam] = useState('');
   const [tieChoice, setTieChoice] = useState<TieChoice>('smaller');
   const [copied, setCopied] = useState<string | null>(null);
 
+  const unlisted = brand === OTHER_BRAND;
   const charts = chartsForBrand(brand);
-  const chart = chartById(chartId) ?? charts[0];
+  const chart = unlisted ? undefined : chartById(chartId) ?? charts[0];
   const labels = chart ? rowLabels(chart) : [];
   const inseamValue = inseam === '' ? null : Number(inseam);
-  const result = chart ? convertBrandSize({ chartId: chart.id, brandSize, marketplace, inseam: inseamValue, tieChoice }) : { ok: false as const, error: 'Choose a brand chart.' };
+  const result = unlisted
+    ? (otherName.trim() && otherSize.trim()
+      ? convertUnlistedBrand({ brandName: otherName, family: otherFamily, brandSize: otherSize, marketplace, inseam: inseamValue, tieChoice })
+      : { ok: false as const, error: '' })
+    : chart
+      ? convertBrandSize({ chartId: chart.id, brandSize, marketplace, inseam: inseamValue, tieChoice })
+      : { ok: false as const, error: 'Choose a brand chart.' };
   const conversion = result.ok === true ? result.conversion : null;
   const conversionError = result.ok === false ? result.error : null;
   const preview = chart ? previewChart(chart, marketplace) : [];
 
   const selectChart = (nextBrand: string, nextChartId = defaultChartId(nextBrand)) => {
+    if (nextBrand === OTHER_BRAND) {
+      setBrand(OTHER_BRAND);
+      setTieChoice('smaller');
+      setInseam('');
+      return;
+    }
     const next = chartById(nextChartId);
     setBrand(nextBrand);
     setChartId(nextChartId);
@@ -56,7 +73,7 @@ export default function SizeConversion({ onUseDescription }: SizeConversionProps
           <div>
             <h2 className="font-semibold">Brand chart to eBay Size</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Since August 2026, eBay only accepts a supported Size on apparel and footwear. The values they named are alpha sizes ({EBAY_ALPHA_SIZES.join(', ')}), numeric sizes where that category still offers them, and region formats (US, UK, EU). Placeholders such as “See description” and combined values such as S/M/L or 32x30 are rejected. If the brand size is not in the dropdown, eBay’s instruction is to choose the closest supported value and put the real size in the description.
+              Since August 2026, eBay only accepts a supported Size on apparel and footwear. The values they named are alpha sizes ({EBAY_ALPHA_SIZES.join(', ')}), numeric sizes where that category still offers them, and region formats (US, UK, EU). Placeholders such as “See description” and combined values such as S/M/L or 32x30 are rejected. If the brand is not listed, choose Another brand. The tag is still standardized, and measurements are left blank until that brand’s chart is loaded.
             </p>
           </div>
         </div>
@@ -66,18 +83,35 @@ export default function SizeConversion({ onUseDescription }: SizeConversionProps
         <Field label="Brand">
           <Select value={brand} onChange={(value) => selectChart(value)}>
             {brands.map((item) => <option key={item} value={item}>{item}</option>)}
+            <option value={OTHER_BRAND}>Another brand</option>
           </Select>
         </Field>
-        <Field label="Official chart">
-          <Select value={chart?.id ?? ''} onChange={(value) => selectChart(brand, value)}>
-            {charts.map((item) => <option key={item.id} value={item.id}>{item.department} · {item.garment}</option>)}
-          </Select>
-        </Field>
-        <Field label="Brand size">
-          <Select value={labels.includes(brandSize) ? brandSize : ''} onChange={(value) => { setBrandSize(value); setTieChoice('smaller'); }}>
-            {labels.map((label) => <option key={label} value={label}>{label}</option>)}
-          </Select>
-        </Field>
+        {unlisted ? (
+          <Field label="Brand name">
+            <Input value={otherName} onChange={(event) => setOtherName(event.target.value)} placeholder="Name on the label" />
+          </Field>
+        ) : (
+          <Field label="Official chart">
+            <Select value={chart?.id ?? ''} onChange={(value) => selectChart(brand, value)}>
+              {charts.map((item) => <option key={item.id} value={item.id}>{item.department} · {item.garment}</option>)}
+            </Select>
+          </Field>
+        )}
+        {unlisted ? (
+          <Field label="Garment">
+            <Select value={otherFamily} onChange={(value) => { setOtherFamily(value as UnlistedFamily); setTieChoice('smaller'); setInseam(''); }}>
+              <option value="tops">Tops and outerwear</option>
+              <option value="pants">Pants and jeans</option>
+              <option value="shoes">Shoes</option>
+            </Select>
+          </Field>
+        ) : (
+          <Field label="Brand size">
+            <Select value={labels.includes(brandSize) ? brandSize : ''} onChange={(value) => { setBrandSize(value); setTieChoice('smaller'); }}>
+              {labels.map((label) => <option key={label} value={label}>{label}</option>)}
+            </Select>
+          </Field>
+        )}
         <Field label="eBay site">
           <Select value={marketplace} onChange={(value) => setMarketplace(value as EbayMarketplace)}>
             <option value="EBAY_US">eBay US</option>
@@ -86,7 +120,15 @@ export default function SizeConversion({ onUseDescription }: SizeConversionProps
         </Field>
       </div>
 
-      {chart?.family === 'waist' ? (
+      {unlisted ? (
+        <Field label="Size on the tag">
+          <div className="max-w-xs">
+            <Input value={otherSize} onChange={(event) => { setOtherSize(event.target.value); setTieChoice('smaller'); }} placeholder={otherFamily === 'shoes' ? '10 or UK 9' : otherFamily === 'pants' ? '32 or 32x30' : 'M or Medium'} />
+          </div>
+        </Field>
+      ) : null}
+
+      {(unlisted ? otherFamily === 'pants' : chart?.family === 'waist') ? (
         <Field label="Inseam, if the tag has one">
           <div className="max-w-xs"><Select value={inseam} onChange={setInseam}>
             <option value="">Not on the tag</option>
@@ -136,7 +178,7 @@ export default function SizeConversion({ onUseDescription }: SizeConversionProps
             <pre className="mt-4 whitespace-pre-wrap rounded-md border border-border bg-muted/40 px-3 py-3 font-sans text-sm leading-6">{conversion.descriptionSnippet}</pre>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-muted-foreground">Official measurements</dt>
+                <dt className="text-xs text-muted-foreground">{conversion.hasChart ? 'Official measurements' : 'Chart'}</dt>
                 <dd className="mt-1">{conversion.measurements}</dd>
               </div>
               <div>
@@ -149,9 +191,11 @@ export default function SizeConversion({ onUseDescription }: SizeConversionProps
             ) : null}
           </div>
         </section>
-      ) : (
+              ) : conversionError ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{conversionError}</p>
-      )}
+      ) : unlisted ? (
+        <p className="text-sm text-muted-foreground">Enter the brand and the size on the tag. Listed brands are the ones with an official chart.</p>
+      ) : null}
 
       {chart ? (
         <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">

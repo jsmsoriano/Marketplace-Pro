@@ -19,12 +19,16 @@ export type SizeConversion = {
   match: SizeMatch;
   alternates: string[];
   beyondSupportedList: boolean;
+  hasChart: boolean;
   measurements: string;
   detail: string;
   descriptionSnippet: string;
   actualSize: string;
   letterAlternative: string | null;
 };
+
+export const OTHER_BRAND = '__other__';
+export type UnlistedFamily = 'tops' | 'pants' | 'shoes';
 
 export type ConvertInput = {
   chartId: string;
@@ -53,6 +57,32 @@ export function convertBrandSize(input: ConvertInput): ConvertResult {
   }
   const conversion = buildConversion(chart, row, input.marketplace, inseam ?? null, input.tieChoice ?? 'smaller');
   return { ok: true, chart, conversion };
+}
+
+export function convertUnlistedBrand(input: {
+  brandName: string;
+  family: UnlistedFamily;
+  brandSize: string;
+  marketplace: EbayMarketplace;
+  inseam?: number | null;
+  tieChoice?: TieChoice;
+}): { ok: true; conversion: SizeConversion } | { ok: false; error: string } {
+  const brandName = input.brandName.replace(/\s+/g, ' ').trim();
+  if (!brandName) return { ok: false, error: 'Enter the brand name printed on the label.' };
+  const parsed = parseTag(input.brandSize, input.family === 'pants' ? 'waist' : input.family === 'shoes' ? 'shoes' : 'alpha');
+  if (parsed.ok === false) return { ok: false, error: parsed.error };
+  const known = SIZE_CHARTS.find((chart) => chart.brand.toLowerCase() === brandName.toLowerCase());
+  const knownNote = known ? ` ${known.brand} is in the brand list. Switch to it for the official chart and measurements.` : '';
+  const inseam = input.inseam ?? parsed.inseam;
+  const built = standardizeUnlisted(brandName, input.family, parsed.token, input.marketplace, inseam, input.tieChoice ?? 'smaller');
+  if (built.ok === false) return built;
+  return {
+    ok: true,
+    conversion: {
+      ...built.conversion,
+      detail: `${built.conversion.detail}${knownNote}`,
+    },
+  };
 }
 
 export function previewChart(chart: SizeChart, marketplace: EbayMarketplace): Array<{ label: string; conversion: SizeConversion }> {
@@ -91,6 +121,126 @@ function parseTag(raw: string, family: SizeChart['family']): ParsedTag {
     if (combined) return { ok: true, token: combined[1], inseam: Number(combined[2]) };
   }
   return { ok: true, token: value, inseam: null };
+}
+
+function standardizeUnlisted(brandName: string, family: UnlistedFamily, token: string, marketplace: EbayMarketplace, inseam: number | null, tieChoice: TieChoice): { ok: true; conversion: SizeConversion } | { ok: false; error: string } {
+  if (/[/]/.test(token) || /\b(and|&)\b/i.test(token)) {
+    return { ok: false, error: 'eBay rejects more than one size in the Size field. Enter one tag size. S/M/L and similar combinations are blocked.' };
+  }
+  const garment = family === 'tops' ? 'tops' : family === 'pants' ? 'pants' : 'shoes';
+  const actualSize = `${brandName} ${garment} ${token}`;
+  const missingChart = `No official size chart is loaded for ${brandName}. The tag text was standardized only. Measurements are not estimated.`;
+
+  if (family === 'shoes') return unlistedShoe(brandName, token, marketplace, actualSize, missingChart);
+  if (family === 'pants') return unlistedPants(brandName, token, marketplace, inseam, tieChoice, actualSize, missingChart);
+  return unlistedTops(brandName, token, marketplace, tieChoice, actualSize, missingChart);
+}
+
+function unlistedTops(brandName: string, token: string, marketplace: EbayMarketplace, tieChoice: TieChoice, actualSize: string, missingChart: string): { ok: true; conversion: SizeConversion } | { ok: false; error: string } {
+  const split = token.split(/\s*-\s*/);
+  const pieces = split.length === 2 && split.every((part) => canonicalAlpha(part)) ? split : [token];
+  if (pieces.length === 1 && !canonicalAlpha(token)) {
+    if (/^\d/.test(token)) {
+      return { ok: false, error: `${token} looks like a waist or shoe size. Switch the garment, or enter the letter printed on the tag. ${brandName}'s chart is not loaded, so a number is not turned into a letter.` };
+    }
+    return { ok: false, error: `${token} is not a letter size eBay can standardize. Enter the tag letter, such as M or XL.` };
+  }
+  const mapped = pieces.map((piece) => toEbayAlpha(piece));
+  const ordered = orderAlphas([...new Set(mapped.map((entry) => entry.size))]);
+  const beyond = mapped.some((entry) => entry.beyond);
+  const tie = ordered.length > 1;
+  const ebaySize = tie ? (tieChoice === 'larger' ? ordered[ordered.length - 1] : ordered[0]) : ordered[0];
+  const detail = tie
+    ? `${brandName} ${token} spans ${ordered.join(' and ')}. eBay accepts one Size value. ${ebaySize} is selected.`
+    : beyond
+      ? `${brandName} ${token} is past the alpha list eBay published (2XS through XXL). ${ebaySize} is the closest supported value.`
+      : `${brandName} ${token} standardizes to ${ebaySize}. ${brandName}'s measurement chart is not loaded.`;
+  return { ok: true, conversion: unlistedResult({ ebaySize, match: tie ? 'tie' : beyond ? 'closest' : 'exact', alternates: tie ? ordered : [], beyond, actualSize, missingChart, detail, inseam: null, marketplace }) };
+}
+
+function unlistedPants(brandName: string, token: string, marketplace: EbayMarketplace, inseam: number | null, tieChoice: TieChoice, actualSize: string, missingChart: string): { ok: true; conversion: SizeConversion } | { ok: false; error: string } {
+  if (canonicalAlpha(token) && !/^\d/.test(token)) {
+    const mapped = toEbayAlpha(token);
+    const detail = marketplace === 'EBAY_UK'
+      ? `${brandName} ${token} standardizes to ${mapped.size}. The waist number, if you have one, stays in the description.`
+      : `${brandName} ${token} standardizes to ${mapped.size}. If this pant category's dropdown is waist numbers instead of letters, use the tagged waist. It is not estimated without the brand chart.`;
+    return { ok: true, conversion: unlistedResult({ ebaySize: mapped.size, match: mapped.beyond ? 'closest' : 'exact', alternates: [], beyond: mapped.beyond, actualSize, missingChart, detail, inseam, marketplace }) };
+  }
+  if (!/^\d+(?:\.\d+)?$/.test(token)) {
+    return { ok: false, error: `Enter a waist number or a letter size from the ${brandName} tag.` };
+  }
+  if (marketplace === 'EBAY_UK') {
+    return { ok: false, error: `eBay UK clothing Size has to be a letter from 2XS to XXL. ${brandName}'s chart is not loaded, so waist ${token} cannot be turned into a letter. Enter the letter on the tag and keep ${token} in the description.` };
+  }
+  const waist = Number(token);
+  const closest = closestEvenWaists(waist);
+  const ebaySize = closest.tie ? (tieChoice === 'larger' ? closest.sizes[1] : closest.sizes[0]) : closest.sizes[0];
+  const detail = closest.tie
+    ? `${closest.sizes[0]} and ${closest.sizes[1]} are equally close to waist ${token}. Odd waists such as 33 and 35 are the values sellers report as missing. ${ebaySize} is selected. ${brandName}'s body measurements are not loaded.`
+    : `Waist ${token} is an even number eBay still describes as a numeric size. ${brandName}'s body measurements are not loaded.`;
+  return { ok: true, conversion: unlistedResult({ ebaySize, match: closest.tie ? 'tie' : 'exact', alternates: closest.tie ? closest.sizes : [], beyond: false, actualSize, missingChart, detail, inseam, marketplace }) };
+}
+
+function unlistedShoe(brandName: string, token: string, marketplace: EbayMarketplace, actualSize: string, missingChart: string): { ok: true; conversion: SizeConversion } | { ok: false; error: string } {
+  const primary = marketplace === 'EBAY_UK' ? 'UK' : 'US';
+  const labeled = token.match(/^(us|uk|eu)\s*(\d+(?:\.\d+)?)$/i);
+  const bare = token.match(/^(\d+(?:\.\d+)?)$/);
+  if (!labeled && !bare) return { ok: false, error: 'Enter a shoe size such as 10, US 10, UK 9, or EU 43.' };
+  if (labeled && labeled[1].toUpperCase() !== primary && labeled[1].toUpperCase() !== 'EU') {
+    const typed = labeled[1].toUpperCase();
+    return { ok: false, error: `${brandName}'s shoe chart is not loaded, so ${typed} ${labeled[2]} cannot be converted to ${primary}. Enter the ${primary} size from the tag, or switch the eBay site.` };
+  }
+  if (labeled && labeled[1].toUpperCase() === 'EU') {
+    return { ok: false, error: `${brandName}'s shoe chart is not loaded, so EU ${labeled[2]} cannot be converted to ${primary}. Enter the ${primary} size from the tag.` };
+  }
+  const value = Number(labeled ? labeled[2] : bare?.[1]);
+  const ebaySize = formatRegionSize(primary, value);
+  return {
+    ok: true,
+    conversion: unlistedResult({
+      ebaySize,
+      match: 'exact',
+      alternates: [],
+      beyond: false,
+      actualSize,
+      missingChart,
+      detail: `${ebaySize} keeps the size on the tag in eBay's region format. Other regions are not converted, because ${brandName}'s shoe chart is not loaded.`,
+      inseam: null,
+      marketplace,
+    }),
+  };
+}
+
+function unlistedResult(draft: {
+  ebaySize: string;
+  match: SizeMatch;
+  alternates: string[];
+  beyond: boolean;
+  actualSize: string;
+  missingChart: string;
+  detail: string;
+  inseam: number | null;
+  marketplace: EbayMarketplace;
+}): SizeConversion {
+  const lines = [
+    `eBay Size: ${draft.ebaySize}`,
+    `Actual size: ${draft.actualSize}`,
+    draft.missingChart,
+  ];
+  if (draft.inseam != null) lines.push(`Inseam: ${formatNumber(draft.inseam)} in. Do not combine inseam with the Size field.`);
+  lines.push('Confirm this value is in the Size dropdown for the leaf category. eBay\'s allowed values still vary by category.');
+  return {
+    ebaySize: draft.ebaySize,
+    match: draft.match,
+    alternates: draft.alternates,
+    beyondSupportedList: draft.beyond,
+    hasChart: false,
+    measurements: draft.missingChart,
+    detail: draft.detail,
+    descriptionSnippet: lines.join('\n'),
+    actualSize: draft.actualSize,
+    letterAlternative: null,
+  };
 }
 
 type ChartRow = { kind: 'alpha'; row: AlphaSize } | { kind: 'waist'; row: WaistSize } | { kind: 'shoe'; row: ShoeSize };
@@ -281,6 +431,7 @@ function finish(chart: SizeChart, label: string, draft: {
     match: draft.match,
     alternates: draft.alternates,
     beyondSupportedList: draft.beyondSupportedList,
+    hasChart: true,
     measurements: draft.measurements,
     detail: draft.detail,
     descriptionSnippet: lines.join('\n'),

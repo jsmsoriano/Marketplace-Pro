@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { convertBrandSize, previewChart } from './size-conversion.ts';
+import { convertBrandSize, convertUnlistedBrand, previewChart } from './size-conversion.ts';
 import { chartById } from './brand-size-charts.ts';
 
 describe('eBay size conversion', () => {
@@ -123,6 +123,44 @@ describe('eBay size conversion', () => {
     assert.equal(combined.ok, false);
     if (combined.ok) return;
     assert.match(combined.error, /one size/i);
+  });
+
+  it('standardizes a brand that has no loaded chart', () => {
+    const medium = convertUnlistedBrand({ brandName: 'Faherty', family: 'tops', brandSize: 'Medium', marketplace: 'EBAY_US' });
+    assert.equal(medium.ok, true);
+    if (medium.ok !== true) return;
+    assert.equal(medium.conversion.ebaySize, 'M');
+    assert.equal(medium.conversion.hasChart, false);
+    assert.match(medium.conversion.measurements, /No official size chart/);
+    assert.doesNotMatch(medium.conversion.descriptionSnippet, /chest/);
+
+    const big = convertUnlistedBrand({ brandName: 'Faherty', family: 'tops', brandSize: '3XL', marketplace: 'EBAY_US' });
+    assert.equal(big.ok, true);
+    if (big.ok !== true) return;
+    assert.equal(big.conversion.ebaySize, 'XXL');
+    assert.equal(big.conversion.match, 'closest');
+
+    const waist = convertUnlistedBrand({ brandName: 'Faherty', family: 'pants', brandSize: '33', marketplace: 'EBAY_US' });
+    assert.equal(waist.ok, true);
+    if (waist.ok !== true) return;
+    assert.equal(waist.conversion.match, 'tie');
+    assert.deepEqual(waist.conversion.alternates, ['32', '34']);
+
+    const ukWaist = convertUnlistedBrand({ brandName: 'Faherty', family: 'pants', brandSize: '33', marketplace: 'EBAY_UK' });
+    assert.equal(ukWaist.ok, false);
+
+    const shoe = convertUnlistedBrand({ brandName: 'Faherty', family: 'shoes', brandSize: '10', marketplace: 'EBAY_US' });
+    assert.equal(shoe.ok, true);
+    if (shoe.ok !== true) return;
+    assert.equal(shoe.conversion.ebaySize, 'US 10');
+
+    const otherRegion = convertUnlistedBrand({ brandName: 'Faherty', family: 'shoes', brandSize: 'UK 9', marketplace: 'EBAY_US' });
+    assert.equal(otherRegion.ok, false);
+
+    const listed = convertUnlistedBrand({ brandName: 'nike', family: 'tops', brandSize: 'M', marketplace: 'EBAY_US' });
+    assert.equal(listed.ok, true);
+    if (listed.ok !== true) return;
+    assert.match(listed.conversion.detail, /brand list/);
   });
 
   it('previews every row of a chart', () => {
