@@ -48,9 +48,9 @@ export default function OptimizeListingV2() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-6">
-      <div><h1 className="text-3xl font-semibold tracking-tight">Listing Lab</h1><p className="mt-2 text-muted-foreground">Optimize one listing or audit every active eBay title for search-quality problems.</p></div>
+      <div><h1 className="text-3xl font-semibold tracking-tight">Listing Lab</h1><p className="mt-2 text-muted-foreground">Optimize a listing or audit active titles.</p></div>
       <Tabs defaultValue="optimizer" className="space-y-5">
-        <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl border border-border bg-card p-1 shadow-sm sm:w-[460px]"><TabsTrigger value="optimizer" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" />Optimize one</TabsTrigger><TabsTrigger value="audit" className="gap-2 py-2.5"><ClipboardCheck className="h-4 w-4" />Title audit</TabsTrigger></TabsList>
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl border border-border bg-card p-1 shadow-sm sm:w-[420px]"><TabsTrigger value="optimizer" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" />Optimize</TabsTrigger><TabsTrigger value="audit" className="gap-2 py-2.5"><ClipboardCheck className="h-4 w-4" />Audit</TabsTrigger></TabsList>
         <TabsContent value="optimizer"><div className="max-w-3xl space-y-8">
       <div className="space-y-5">
         <div className="space-y-2"><Label htmlFor="title">Draft title</Label><Input id="title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nike Air Max 270 Black White Size 10 Used" maxLength={120} /><p className="text-xs text-muted-foreground">{title.length}/80 eBay limit · inferred brand: {brand || '—'}</p></div>
