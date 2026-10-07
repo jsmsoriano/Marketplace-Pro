@@ -16,6 +16,7 @@ const titles: Record<string, string> = {
   '/inventory-audit': 'Inventory Audit',
   '/calculator': 'Sales Calculator',
   '/reports': 'Reports',
+  '/sizes': 'Size Conversion',
 };
 
 const Header = () => {

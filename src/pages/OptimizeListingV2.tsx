@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, ClipboardCheck, Copy, Loader2, Ruler, Sparkles } from 'lucide-react';
+import { Check, ClipboardCheck, Copy, Loader2, Sparkles } from 'lucide-react';
 import TitleAudit from '@/components/TitleAudit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { useSalesData } from '@/hooks/use-sales-data';
 import { optimizeListing } from '@/lib/api';
-import SizeConversion from '@/components/SizeConversion';
 import { inferBrand } from '@/lib/orders';
 
 type Optimization = Awaited<ReturnType<typeof optimizeListing>>['optimization'];
@@ -49,9 +48,9 @@ export default function OptimizeListingV2() {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-6">
-      <div><h1 className="text-3xl font-semibold tracking-tight">Listing Lab</h1><p className="mt-2 text-muted-foreground">Optimize a listing, convert a brand’s official size to eBay’s standardized Size, or audit active titles.</p></div>
+      <div><h1 className="text-3xl font-semibold tracking-tight">Listing Lab</h1><p className="mt-2 text-muted-foreground">Optimize a listing or audit active titles.</p></div>
       <Tabs defaultValue="optimizer" className="space-y-5">
-        <TabsList className="grid h-auto w-full grid-cols-3 rounded-xl border border-border bg-card p-1 shadow-sm sm:w-[640px]"><TabsTrigger value="optimizer" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" />Optimize</TabsTrigger><TabsTrigger value="sizes" className="gap-2 py-2.5"><Ruler className="h-4 w-4" />Sizes</TabsTrigger><TabsTrigger value="audit" className="gap-2 py-2.5"><ClipboardCheck className="h-4 w-4" />Audit</TabsTrigger></TabsList>
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl border border-border bg-card p-1 shadow-sm sm:w-[420px]"><TabsTrigger value="optimizer" className="gap-2 py-2.5"><Sparkles className="h-4 w-4" />Optimize</TabsTrigger><TabsTrigger value="audit" className="gap-2 py-2.5"><ClipboardCheck className="h-4 w-4" />Audit</TabsTrigger></TabsList>
         <TabsContent value="optimizer"><div className="max-w-3xl space-y-8">
       <div className="space-y-5">
         <div className="space-y-2"><Label htmlFor="title">Draft title</Label><Input id="title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nike Air Max 270 Black White Size 10 Used" maxLength={120} /><p className="text-xs text-muted-foreground">{title.length}/80 eBay limit · inferred brand: {brand || '—'}</p></div>
@@ -67,7 +66,6 @@ export default function OptimizeListingV2() {
         <p className="text-xs text-muted-foreground">Source: {result.source}. This is decision support, not a guarantee of sale price.</p>
       </div> : null}
         </div></TabsContent>
-        <TabsContent value="sizes"><SizeConversion onUseDescription={(snippet) => { setDescription((current) => current.trim() ? `${current.trim()}\n\n${snippet}` : snippet); toast({ title: 'Size note added', description: 'It is on the draft description in Optimize.' }); }} /></TabsContent>
         <TabsContent value="audit"><TitleAudit /></TabsContent>
       </Tabs>
     </div>

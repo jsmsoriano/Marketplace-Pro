@@ -12,6 +12,7 @@ import InventoryMap from '@/pages/InventoryMap';
 import InventoryAudit from '@/pages/InventoryAudit';
 import SalesCalculator from '@/pages/SalesCalculator';
 import Reports from '@/pages/Reports';
+import SizeConversionPage from '@/pages/SizeConversionPage';
 import NotFound from '@/pages/NotFound';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
               <Route path="/inventory-audit" element={<Layout><InventoryAudit /></Layout>} />
               <Route path="/calculator" element={<Layout><SalesCalculator /></Layout>} />
               <Route path="/reports" element={<Layout><Reports /></Layout>} />
+              <Route path="/sizes" element={<Layout><SizeConversionPage /></Layout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />

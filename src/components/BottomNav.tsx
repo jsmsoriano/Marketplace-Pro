@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Calculator, ClipboardCheck, FileSpreadsheet, Grid3X3, ListChecks, Menu, Search, ShoppingBag, Sparkles } from 'lucide-react';
+import { BarChart3, Calculator, ClipboardCheck, FileSpreadsheet, Grid3X3, ListChecks, Menu, Ruler, Search, ShoppingBag, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -13,7 +13,8 @@ const allItems = [
   { icon: Calculator, label: 'Sales calculator', shortLabel: 'Calc', description: 'Estimate eBay proceeds and profit', path: '/calculator' },
   { icon: FileSpreadsheet, label: 'Reports', shortLabel: 'Reports', description: 'Customize and print marketplace reports', path: '/reports' },
   { icon: Search, label: 'Market signals', shortLabel: 'Signals', description: 'Brand, category, and demand trends', path: '/research' },
-  { icon: Sparkles, label: 'Listing lab', shortLabel: 'Listing', description: 'Titles, descriptions, and brand size conversion', path: '/optimize' },
+  { icon: Sparkles, label: 'Listing lab', shortLabel: 'Listing', description: 'Titles, descriptions, and title audits', path: '/optimize' },
+  { icon: Ruler, label: 'Size conversion', shortLabel: 'Sizes', description: 'Brand charts and tags to eBay Size', path: '/sizes' },
 ];
 
 const primaryPaths = ['/', '/pull-list', '/sourcing', '/calculator'];

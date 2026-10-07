@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { BarChart3, Calculator, ClipboardCheck, FileSpreadsheet, Grid3X3, ListChecks, Search, ShoppingBag, Sparkles } from 'lucide-react';
+import { BarChart3, Calculator, ClipboardCheck, FileSpreadsheet, Grid3X3, ListChecks, Ruler, Search, ShoppingBag, Sparkles } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +24,7 @@ const navItems = [
   { icon: FileSpreadsheet, label: 'Reports', path: '/reports' },
   { icon: Search, label: 'Market signals', path: '/research' },
   { icon: Sparkles, label: 'Listing lab', path: '/optimize' },
+  { icon: Ruler, label: 'Size conversion', path: '/sizes' },
 ];
 
 const AppSidebar = () => {
